@@ -32,6 +32,8 @@ public abstract class MotorVehicle
 // A car is a vehicle and can also take a form of it in the program(we can save it in the MotorVehicle reference) so polymorphism is also here!
 public class Car : Vehicle
 {
+    // We could call for example this method on a Car object which is stored in the MotorVehicle reference.
+    // Because Car is a subtype we do not car which one - Car or Bike. We know they are and depending on the real type appropriate method will be called.
     public override void Start()
     {
         Console.WriteLine("Car started...");
