@@ -1,56 +1,23 @@
-// C# does not support multiple inehritance, only implementing multiple interfaces is supported. But conceptually we could represent
-// our enclosed hierarch this way
-
-public interface IEventStoreEvent
+public abstract class ImportParser
 {
-    public Guid EventId { get; }
-
-    public Guid ActorId { get; }
-
-    public DateTimeOffset CreatedAt { get; }
-
-    public DateTimeOffset ChangedAt { get; }
-}
-
-public interface IEventStoreCreatedEvent : IEventStoreEvent
-{
-    public Guid Id { get; }
-}
-
-public interface IResourceEventVisitor
-{
-    public ValueTask Visit(EquipmentCreated event);
-
-    public ValueTask Visit(PersonCreated event);
-
-    public ValueTask Visit(PlaceCreated event);
-}
-
-public abstract class ResourceEvent<T> where T : IEventStoreEvent
-{
-    public async ValueTask Visit(T visitor)
+    // template pattern is a good example of a case where we might want to prevent derived classes
+    // overriding our core method which uses protected abstract methods which must be implemented
+    // by the derived classes. For that in c# all methods are "non virtual" by default so if we do not mark
+    // method as virtual then we can not override it.
+    public ValueTask<ParsingResult> Parse(Stream stream)
     {
-        await visitor.Visit(this);
-    }
-}
+        await CreatedReader(stream);
 
-public class EquipmentCreated<T> : ResourceEvent<T> where T : IResourceEventVisitor;
-public class PersonCreated<T> : ResourceEvent<T> where T : IResourceEventVisitor;
-public class PlaceCreated<T> : ResourceEvent<T> where T : IResourceEventVisitor;
-
-public class EventValidationVisitor : IResourceEventVisitor
-{
-    public async ValueTask Visit(EquipmentCreated event)
-    {
-        if (event is None)
+        while (await Read())
         {
+            string currentRow = GetCurrentRow();
             ...
         }
-        ...
-        // to be able to work with None polymorphically we need to add an explicit check for it, otherwise we get an exception
-        // altough visitor assumes that we dispatch operation on various types which are assumed to be valid types, i still wanted to add this example because this is
-        // how working with None really looks like - in every such method we check if current object is not None and only then perform the operation.
     }
-}
 
-public sealed class None : EquipmentCreated, PersonCreated, PlaceCreated, IEventStoreCreatedEvent, EventValidationVisitor;
+    protected abstract ValueTask CreatedReader(Stream stream);
+
+    protected abstract ValueTask<bool> Read();
+
+    protected abstract string GetCurrentRow();
+}
