@@ -1,28 +1,56 @@
-// Learning simplified example from real world project. Let's say we have a system with different
-// types of resources - equipment, places, people and so on. And when importing a resource we want to validate them.
-// We do not want derived classes to override our main validation logic, so we do not mark this method as virtual what would allow derived classes to override it
-// However for example we still make the class open because we want to work with different types of resources and depending on the resource type we may have different validatio
-// rules, so we have an abstract method which must be implemented by derived classes to provide concrete resource type/category which our validation factory will use
-// to deliver correct validator.
-public abstract class ImportCoordinator
+// C# does not support multiple inehritance, only implementing multiple interfaces is supported. But conceptually we could represent
+// our enclosed hierarch this way
+
+public interface IEventStoreEvent
 {
-    private readonly ValidatorFactory _validatorFactory;
+    public Guid EventId { get; }
 
-    public async Task<ValidationResult> ValidateImportAsync(ResourceImport resourceImport)
-    {
-        ImportValidator validator = _validatorFactory.CreateAsync(GetResourceCategory());
+    public Guid ActorId { get; }
 
-        validator.ValidateResourceHeaders(resourceImport.ResourceHeaders);
-        validator.ValidateCustomFieldHeaders(resourceImport.CustomFieldHeaders);
+    public DateTimeOffset CreatedAt { get; }
 
-        List<ValidationError> validationErrors = resourceImport.Resources
-            .Select(resource => validator.ValidateResource(resource))
-            .Where(result => !result.IsSuccess)
-            .Select(result => result.ValidationErrors)
-            .ToList();
-
-        return validationErrors.Count == 0 ? ValidationResult.Success() : ValidationResult.WithErrors(validationErrors);
-    }
-
-    public abstract ResourceCategory GetResourceCategory();
+    public DateTimeOffset ChangedAt { get; }
 }
+
+public interface IEventStoreCreatedEvent : IEventStoreEvent
+{
+    public Guid Id { get; }
+}
+
+public interface IResourceEventVisitor
+{
+    public ValueTask Visit(EquipmentCreated event);
+
+    public ValueTask Visit(PersonCreated event);
+
+    public ValueTask Visit(PlaceCreated event);
+}
+
+public abstract class ResourceEvent<T> where T : IEventStoreEvent
+{
+    public async ValueTask Visit(T visitor)
+    {
+        await visitor.Visit(this);
+    }
+}
+
+public class EquipmentCreated<T> : ResourceEvent<T> where T : IResourceEventVisitor;
+public class PersonCreated<T> : ResourceEvent<T> where T : IResourceEventVisitor;
+public class PlaceCreated<T> : ResourceEvent<T> where T : IResourceEventVisitor;
+
+public class EventValidationVisitor : IResourceEventVisitor
+{
+    public async ValueTask Visit(EquipmentCreated event)
+    {
+        if (event is None)
+        {
+            ...
+        }
+        ...
+        // to be able to work with None polymorphically we need to add an explicit check for it, otherwise we get an exception
+        // altough visitor assumes that we dispatch operation on various types which are assumed to be valid types, i still wanted to add this example because this is
+        // how working with None really looks like - in every such method we check if current object is not None and only then perform the operation.
+    }
+}
+
+public sealed class None : EquipmentCreated, PersonCreated, PlaceCreated, IEventStoreCreatedEvent, EventValidationVisitor;
