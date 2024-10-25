@@ -1,3 +1,7 @@
+As already mentioned in the course examples of subtyping can be met naturally in many sciences. For example geometry - we have
+an abstract concept of "Shape" and then subtypes which are semantically not the same - Circle, Rectangle, Triangle. There are core
+differences in the way how we say compute their square.
+
 Say we want to have notifications feature in the system. Then very probably that we will need a basic functionality
 for handling notifications. This could be some "AbstractNotificationService" with common methods for handling notifications.
 Then we want to have a more specialized version say "SmsNotificationService" or even "EmailNotificationService". They do not
